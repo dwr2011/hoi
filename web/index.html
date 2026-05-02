@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>实时大战略地图</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; display: grid; grid-template-columns: 260px 1fr; height: 100vh; }
+    #sidebar { padding: 12px; border-right: 1px solid #ddd; overflow: auto; }
+    #map { width: 100%; height: 100%; background: #eef3f9; cursor: crosshair; }
+    .hint { color: #666; font-size: 12px; }
+    button { margin: 4px 0; width: 100%; }
+    pre { font-size: 12px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <h3>联机控制</h3>
+    <input id="name" value="德国" placeholder="玩家名" />
+    <button onclick="connectWS()">连接</button>
+    <button onclick="research()">科研 industry_1</button>
+    <button onclick="declareWar()">对 AI-苏联 宣战</button>
+    <p class="hint">左键：选中省份（先选己方出发地，再选目标地）<br/>右键：在己方省份快速征兵 +5<br/>Shift+左键目标：攻击</p>
+    <div id="state"></div>
+    <pre id="log"></pre>
+  </div>
+  <canvas id="map"></canvas>
+<script>
+const canvas = document.getElementById('map');
+const ctx = canvas.getContext('2d');
+const stateBox = document.getElementById('state');
+let ws = null, game = null, me = null;
+let selectedFrom = null;
+
+const layout = {
+  1:{x:180,y:140},2:{x:350,y:120},3:{x:160,y:300},4:{x:340,y:280},5:{x:520,y:140},6:{x:520,y:300}
+};
+
+const colors = ["#a8d5ff", "#ffc9a8", "#c0f0c0", "#f4c2ff", "#ffe79f", "#ffd1dc"];
+const ownerColor = {};
+
+function resize(){ canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; draw(); }
+window.addEventListener('resize', resize); resize();
+
+function colorFor(owner){
+  if(!owner) return '#ddd';
+  if(!ownerColor[owner]) ownerColor[owner] = colors[Object.keys(ownerColor).length % colors.length];
+  return ownerColor[owner];
+}
+
+function findProvinceAt(x,y){
+  if(!game) return null;
+  for(const p of game.provinces){
+    const c = layout[p.id];
+    const dx=x-c.x, dy=y-c.y;
+    if(dx*dx+dy*dy <= 55*55) return p;
+  }
+  return null;
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!game) return;
+  // edges
+  ctx.strokeStyle = '#999'; ctx.lineWidth = 2;
+  for(const p of game.provinces){
+    const a = layout[p.id];
+    for(const nb of p.neighbors){
+      if(nb < p.id) continue;
+      const b = layout[nb];
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    }
+  }
+  for(const p of game.provinces){
+    const c = layout[p.id];
+    ctx.fillStyle = colorFor(p.owner);
+    ctx.beginPath(); ctx.arc(c.x,c.y,55,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = (selectedFrom && selectedFrom.id===p.id) ? '#ff0000' : '#333';
+    ctx.lineWidth = (selectedFrom && selectedFrom.id===p.id) ? 4 : 2;
+    ctx.stroke();
+    ctx.fillStyle='#111';
+    ctx.font='14px sans-serif';
+    ctx.fillText(`${p.id} ${p.name}`, c.x-36, c.y-8);
+    ctx.fillText(`👤 ${p.owner||'中立'}`, c.x-36, c.y+12);
+    ctx.fillText(`⚔ ${p.troops}`, c.x-36, c.y+30);
+  }
+}
+
+function connectWS(){
+  me = document.getElementById('name').value || '玩家';
+  ws = new WebSocket(`ws://${location.host}/ws/${encodeURIComponent(me)}`);
+  ws.onmessage = (e)=>{
+    const data = JSON.parse(e.data);
+    if(data.type==='state'){ game = data; renderInfo(); draw(); }
+    else { document.getElementById('log').textContent = JSON.stringify(data,null,2); }
+  }
+}
+
+function renderInfo(){
+  const selfNation = game.nations.find(n=>n.name===me);
+  stateBox.innerHTML = selfNation
+    ? `<b>Tick:</b> ${game.tick}<br/><b>工业:</b> ${selfNation.industry} <b>人力:</b> ${selfNation.manpower} <b>科研:</b> ${selfNation.research}`
+    : `<b>Tick:</b> ${game.tick}`;
+}
+
+canvas.addEventListener('click',(e)=>{
+  const rect=canvas.getBoundingClientRect();
+  const p=findProvinceAt(e.clientX-rect.left,e.clientY-rect.top);
+  if(!p || !ws || !game) return;
+  if(!selectedFrom){ selectedFrom = p; draw(); return; }
+
+  if(e.shiftKey){
+    ws.send(JSON.stringify({cmd:'attack', args:{from_id:selectedFrom.id, to_id:p.id, amount:10}}));
+  } else {
+    ws.send(JSON.stringify({cmd:'move', args:{from_id:selectedFrom.id, to_id:p.id, amount:8}}));
+  }
+  selectedFrom = null; draw();
+});
+
+canvas.addEventListener('contextmenu',(e)=>{
+  e.preventDefault();
+  if(!ws || !game) return;
+  const rect=canvas.getBoundingClientRect();
+  const p=findProvinceAt(e.clientX-rect.left,e.clientY-rect.top);
+  if(!p) return;
+  ws.send(JSON.stringify({cmd:'recruit', args:{province_id:p.id, amount:5}}));
+});
+
+function research(){ if(ws) ws.send(JSON.stringify({cmd:'research', args:{tech_id:'industry_1'}})); }
+function declareWar(){ if(ws) ws.send(JSON.stringify({cmd:'diplomacy', args:{target:'AI-苏联', action:'declare_war'}})); }
+</script>
+</body>
+</html>
