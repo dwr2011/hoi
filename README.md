@@ -85,3 +85,54 @@ py server.py --host 127.0.0.1 --port 9000
 ```bash
 py -m uvicorn server:app --host 127.0.0.1 --port 9000 --log-level debug
 ```
+
+
+## Python 3.7 兼容说明（你这个报错的根因）
+
+你当前环境是 `Python 3.7` + 很旧的 `pip 20.1.1`，而我之前写的 `fastapi>=0.115.0` 需要更高版本 Python，
+所以会出现 `No matching distribution found`。
+
+现在仓库已改成 **Python 3.7 可安装** 版本：
+- `fastapi==0.103.2`
+- `uvicorn==0.22.0`
+- `websockets==10.4`
+
+建议命令（Windows）：
+
+```bash
+py -m pip install --upgrade pip
+py -m pip install -r requirements.txt
+py server.py --host 127.0.0.1 --port 9000
+```
+
+如果你后续升级到 Python 3.10+，再把依赖升到更新版本会更稳。
+
+
+## 你仍然看到 `fastapi>=0.115.0` 怎么办？
+
+这说明你运行的不是我最新文件（旧目录或旧压缩包）。
+请先在当前目录执行：
+
+```bash
+type requirements.txt
+```
+
+如果第一行不是 `fastapi==0.103.2`，就是旧文件。
+
+### 最省事方案（Python 3.7）
+
+直接双击或运行：
+
+```bash
+setup_windows_py37.bat
+```
+
+它会自动：升级 pip、安装 3.7 兼容依赖、启动服务器。
+
+### 手动方案
+
+```bash
+py -3.7 -m pip install --upgrade pip setuptools wheel
+py -3.7 -m pip install -r requirements-py37.txt
+py -3.7 server.py --host 127.0.0.1 --port 9000
+```
