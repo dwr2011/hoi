@@ -42,3 +42,46 @@ python3 client.py --host 127.0.0.1 --port 9000 --name 德国
 - **Shift + 左键目标省份**：发起攻击
 - **右键省份**：快速征兵（+5）
 - 地图会实时显示省份归属、兵力、连接关系，并随 tick 自动刷新
+
+
+## Windows 启动排错（你说“啥都没有”）
+
+如果你在 Windows 的 CMD 中执行：
+
+```bash
+python3 server.py --host 0.0.0.0 --port 9000
+```
+
+没有任何输出，按下面做：
+
+1. 先确认 Python 命令（Windows 通常是 `py` 或 `python`，不一定有 `python3`）：
+
+```bash
+py --version
+python --version
+```
+
+2. 安装依赖：
+
+```bash
+py -m pip install -r requirements.txt
+```
+
+3. 启动服务器（推荐）：
+
+```bash
+py server.py --host 127.0.0.1 --port 9000
+```
+
+4. 看到如下日志即表示启动成功：
+- `[启动] HOI realtime server 正在启动...`
+- `Uvicorn running on ...`
+
+5. 浏览器打开：
+- `http://127.0.0.1:9000`
+
+如果仍无输出，请直接运行：
+
+```bash
+py -m uvicorn server:app --host 127.0.0.1 --port 9000 --log-level debug
+```

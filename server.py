@@ -13,6 +13,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
+import traceback
 
 from shared import Nation, Province
 
@@ -299,7 +300,15 @@ def main() -> None:
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=9000)
     args = parser.parse_args()
-    uvicorn.run(app, host=args.host, port=args.port)
+    print(f"[启动] HOI realtime server 正在启动: http://{args.host}:{args.port}")
+    print("[启动] 浏览器打开: http://127.0.0.1:%d" % args.port)
+    print("[启动] WebSocket 地址: ws://127.0.0.1:%d/ws/<你的名字>" % args.port)
+    try:
+        uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    except Exception as exc:
+        print("[错误] 服务器启动失败:", exc)
+        traceback.print_exc()
+        print("[提示] 请先安装依赖: pip install fastapi uvicorn websockets")
 
 
 if __name__ == "__main__":
