@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh">
+<head><meta charset="UTF-8"><title>大战略联机原型</title></head>
+<body>
+  <h2>实时大战略（WebSocket）</h2>
+  <input id="name" placeholder="玩家名" value="德国" />
+  <button onclick="connectWS()">连接</button>
+  <button onclick="sendCmd('recruit')">征兵</button>
+  <button onclick="sendCmd('attack')">进攻</button>
+  <button onclick="sendCmd('research')">科研</button>
+  <button onclick="declareWar()">宣战</button>
+  <pre id="log"></pre>
+<script>
+let ws;
+function log(v){document.getElementById('log').textContent = JSON.stringify(v,null,2)}
+function connectWS(){
+ const n=document.getElementById('name').value||'玩家';
+ ws = new WebSocket(`ws://${location.host}/ws/${encodeURIComponent(n)}`);
+ ws.onmessage = e=>{const d=JSON.parse(e.data); log(d)};
+}
+function sendCmd(cmd){
+ if(!ws) return;
+ if(cmd==='recruit') ws.send(JSON.stringify({cmd:'recruit', args:{province_id:1, amount:5}}));
+ if(cmd==='attack') ws.send(JSON.stringify({cmd:'attack', args:{from_id:1, to_id:2, amount:8}}));
+ if(cmd==='research') ws.send(JSON.stringify({cmd:'research', args:{tech_id:'industry_1'}}));
+}
+function declareWar(){if(ws)ws.send(JSON.stringify({cmd:'diplomacy', args:{target:'AI-苏联', action:'declare_war'}}));}
+</script>
+</body></html>
