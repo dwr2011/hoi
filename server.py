@@ -139,6 +139,8 @@ class RealtimeGame:
                 return {"ok": True, "message": self._recruit(player, args)}
             if cmd == "attack":
                 return {"ok": True, "message": self._attack(player, args)}
+            if cmd == "move":
+                return {"ok": True, "message": self._move(player, args)}
             if cmd == "research":
                 return {"ok": True, "message": self._research(player, args)}
             if cmd == "diplomacy":
@@ -158,6 +160,21 @@ class RealtimeGame:
         n.manpower -= amount
         p.troops += amount
         return f"recruit +{amount}"
+
+
+    def _move(self, player: str, args: Dict[str, Any]) -> str:
+        frm = self.provinces.get(int(args.get("from_id", 0)))
+        to = self.provinces.get(int(args.get("to_id", 0)))
+        amount = int(args.get("amount", 0))
+        if not frm or not to or frm.owner != player or to.owner != player:
+            return "move invalid owner"
+        if to.id not in frm.neighbors:
+            return "move not adjacent"
+        if amount <= 0 or frm.troops < amount:
+            return "move troops insufficient"
+        frm.troops -= amount
+        to.troops += amount
+        return "move success"
 
     def _attack(self, player: str, args: Dict[str, Any]) -> str:
         a, b = args.get("from_id"), args.get("to_id")
